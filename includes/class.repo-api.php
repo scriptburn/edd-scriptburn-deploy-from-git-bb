@@ -576,7 +576,6 @@ abstract class SCB_Repo_API
                 require_once ABSPATH . "wp-admin" . '/includes/media.php';
             }
             $url = add_query_arg(array('access_token' => $this->get_oauth_data('access_token')), $url);
-            $url = "http://localhost/scriptburn-wp-hide-post-v2.0.3-0-gdcac945.zip";
             $tmp = scb_edd_download_file($url, 100);
             if (is_wp_error($tmp))
             {
