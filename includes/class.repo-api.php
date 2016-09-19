@@ -939,7 +939,7 @@ abstract class SCB_Repo_API
                     $cur_dir = getcwd();
                     chdir($new_folder);
                     $glob = glob($new_folder . "/*");
-                    p_l($glob);
+                    //p_l($glob);
                     $zip->close();
 
                     if (!is_array($glob) || (is_array($glob) && count($glob) == 1))
