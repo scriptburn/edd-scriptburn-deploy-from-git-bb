@@ -141,7 +141,8 @@ function scb_edd_zipData($source, $destination, $folder_name)
     }
 
     $zip = new ZipArchive();
-    if (!$zip->open($destination, ZIPARCHIVE::OVERWRITE))
+    @unlink($destination);
+    if ( $zip->open($destination, ZipArchive::OVERWRITE|ZipArchive::CREATE)!==true)
     {
         return false;
     }
@@ -154,6 +155,12 @@ function scb_edd_zipData($source, $destination, $folder_name)
 
         foreach ($files as $file)
         {
+            if ($file->getFilename() == '.' || $file->getFilename() == '..')
+            {
+                continue;
+            }
+            $file = $file->getPathName();
+
             $file = str_replace('\\', DIRECTORY_SEPARATOR, $file);
 
             // Ignore "." and ".." folders
@@ -170,6 +177,7 @@ function scb_edd_zipData($source, $destination, $folder_name)
             }
             else if (is_file($file) === true)
             {
+
                 $zip->addFromString(str_replace($source . DIRECTORY_SEPARATOR, $folder_name . DIRECTORY_SEPARATOR, $file), file_get_contents($file));
             }
         }
