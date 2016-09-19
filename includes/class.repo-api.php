@@ -558,9 +558,9 @@ abstract class SCB_Repo_API
             return array(0, $e->getMessage());
         }
     }
-    public function save_remote_tag_url($attachment, $url, $post_id)
+    public function save_remote_tag_url($attachment, $url, $post)
     {
-
+        $post_id=$post->ID;
         $last_attachment = '';
         try
         {
@@ -583,7 +583,7 @@ abstract class SCB_Repo_API
             }
             p_l(" $url - $tmp-" . size_format(filesize($tmp)));
 
-            $repacked = $this->repack($tmp, $attachment['package'], $attachment['tag_num']);
+            $repacked = $this->repack($tmp, $attachment,$post);
 
             if (!$repacked[0])
             {
@@ -839,7 +839,7 @@ abstract class SCB_Repo_API
         $inloop = -1;
         try
         {
-
+            $post=get_post($post_id);
             $trans = 'scb_edd_repo_%1$s_' . $post_id . "_" . get_current_user_id();
             $meta  = array();
             foreach ($files as $index => $file)
@@ -849,7 +849,7 @@ abstract class SCB_Repo_API
                 if (isset($file['repo']))
                 {
                     $repo_url = $this->translate_short_repo_url($file['repo'], $file['tag']);
-                    $ret      = $this->save_remote_tag_url($file, $repo_url, $post_id);
+                    $ret      = $this->save_remote_tag_url($file, $repo_url,  $post);
                     p_l($ret);
 
                     $files[$index]['file']              = $ret['file'];
@@ -903,8 +903,10 @@ abstract class SCB_Repo_API
         }
     }
 
-    public function repack($file, $new_name, $new_tag)
+    public function repack($file, $attachment,$post)
     {
+        $new_name = $attachment['package'];
+        $new_tag  = $attachment['tag_num'];
         try
         {
             $tmp_dir = rtrim(sys_get_temp_dir(), "/") . "/";
@@ -945,7 +947,9 @@ abstract class SCB_Repo_API
                         $glob_info = pathinfo($glob[0]);
                         p_l($glob_info);
                         //rename($glob[0], $glob_info['dirname'] . "/" . $new_name);
-                        do_action('scb_edd_before_repack', $glob[0]);
+                        $hook_data=array('post'=>$post,'attachment'=>$attachment,'folder'=>$glob[0]);
+                        p_l($hook_data);
+                        do_action('scb_edd_before_repack',$hook_data );
                         $ret = scb_edd_zipData($glob[0], $tmp_dir . $new_name . "-v." . $new_tag . ".zip", $new_name);
                         if (!$ret)
                         {
