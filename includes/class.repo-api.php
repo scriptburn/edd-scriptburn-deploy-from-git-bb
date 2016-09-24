@@ -249,7 +249,7 @@ abstract class SCB_Repo_API
             p_l($posts);
             if (!is_array($posts) || !count($posts))
             {
-                throw new Exception('nothing to process ');
+                throw new Exception('nothing to process ' . $sql);
             }
             $failed = array();
             $passed = array();
@@ -294,13 +294,13 @@ abstract class SCB_Repo_API
                     }
                     elseif (version_compare($file['new_tag'], $file['tag_num'], 'gt'))
                     {
-                        $file = array_merge($file, scb_edd_merge_repo_input('git://' . $repo_to_update . '/@' . $file['new_tag']));
+                        $file = array_merge($file, scb_edd_merge_repo_input($protocol . '://' . $repo_to_update . '/@' . $file['new_tag']));
                         //$file['repo_url'] = 'git://' . $repo_to_update . '/@' . $file['new_tag'];
                         //$file['tag']      = $file['new_tag'];
                     }
                     elseif (version_compare($file['new_tag'], $file['tag_num'], 'eq'))
                     {
-                        $file = array_merge($file, scb_edd_merge_repo_input('git://' . $repo_to_update . '/@' . $file['new_tag']));
+                        $file = array_merge($file, scb_edd_merge_repo_input($protocol . '://' . $repo_to_update . '/@' . $file['new_tag']));
 
                     }
                     else
@@ -313,7 +313,11 @@ abstract class SCB_Repo_API
                     $files[$index] = scb_edd_clear_temp_indexes($file[0]);
                     p_l($files);
                     update_post_meta($download['post_id'], 'edd_download_files', $files);
-                    $passed[] = sprintf('Download %1$s updated succesfuly from %2$s respositry %3$s tag %4$s ', isset($download['post_title']) ? '"' . $download['post_title'] . '"' : '', $text, $repo_to_update, $new_version);
+                    $passed[] = sprintf('Download %1$s updated succesfuly from %2$s respositry %3$s tag %4$s ',
+                        isset($download['post_title']) ? '"' . $download['post_title'] . '"' : '',
+                        $protocol,
+                        $repo_to_update,
+                        $new_version);
 
                 }
                 catch (Exception $e)
@@ -371,7 +375,7 @@ abstract class SCB_Repo_API
         $post = @json_decode($post) ? json_decode($post) : $post;
 
         //is this hook is from github
-        //p_l((property_exists($post, 'repository') ? "1:1" : '1:0') . "-" . (property_exists($post->repository, 'html_url') ? "2:1" : '2:0') . "-" . (stripos($post->repository->html_url, '://github.com') === false ? "3:0" : '3:1'));
+        p_l($post->push);
 
         // p_d($post->push->changes[0]->new->links->self->href);
 
@@ -560,7 +564,7 @@ abstract class SCB_Repo_API
     }
     public function save_remote_tag_url($attachment, $url, $post)
     {
-        $post_id=$post->ID;
+        $post_id         = $post->ID;
         $last_attachment = '';
         try
         {
@@ -583,7 +587,7 @@ abstract class SCB_Repo_API
             }
             p_l(" $url - $tmp-" . size_format(filesize($tmp)));
 
-            $repacked = $this->repack($tmp, $attachment,$post);
+            $repacked = $this->repack($tmp, $attachment, $post);
 
             if (!$repacked[0])
             {
@@ -839,7 +843,7 @@ abstract class SCB_Repo_API
         $inloop = -1;
         try
         {
-            $post=get_post($post_id);
+            $post  = get_post($post_id);
             $trans = 'scb_edd_repo_%1$s_' . $post_id . "_" . get_current_user_id();
             $meta  = array();
             foreach ($files as $index => $file)
@@ -849,7 +853,7 @@ abstract class SCB_Repo_API
                 if (isset($file['repo']))
                 {
                     $repo_url = $this->translate_short_repo_url($file['repo'], $file['tag']);
-                    $ret      = $this->save_remote_tag_url($file, $repo_url,  $post);
+                    $ret      = $this->save_remote_tag_url($file, $repo_url, $post);
                     p_l($ret);
 
                     $files[$index]['file']              = $ret['file'];
@@ -903,7 +907,7 @@ abstract class SCB_Repo_API
         }
     }
 
-    public function repack($file, $attachment,$post)
+    public function repack($file, $attachment, $post)
     {
         $new_name = $attachment['package'];
         $new_tag  = $attachment['tag_num'];
@@ -947,9 +951,9 @@ abstract class SCB_Repo_API
                         $glob_info = pathinfo($glob[0]);
                         p_l($glob_info);
                         //rename($glob[0], $glob_info['dirname'] . "/" . $new_name);
-                        $hook_data=array('post'=>$post,'attachment'=>$attachment,'folder'=>$glob[0]);
+                        $hook_data = array('post' => $post, 'attachment' => $attachment, 'folder' => $glob[0]);
                         p_l($hook_data);
-                        do_action('scb_edd_before_repack',$hook_data );
+                        do_action('scb_edd_before_repack', $hook_data);
                         $ret = scb_edd_zipData($glob[0], $tmp_dir . $new_name . "-v." . $new_tag . ".zip", $new_name);
                         if (!$ret)
                         {
