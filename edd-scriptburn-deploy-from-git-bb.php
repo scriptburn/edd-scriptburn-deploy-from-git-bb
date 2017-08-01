@@ -3,7 +3,7 @@
  * Plugin Name:     Deploy Directly From GitHub and BitBucket
  * Plugin URI:      http://scriptburn.com/downloads/edd-scriptburn-deploy-from-git-bb
  * Description:     Use this plugin to deploy directly from github and bitbucket hosted code in your shop
- * Version:         1.0.0
+ * Version:         1.3.0
  * Author:          Rajneesh ojha
  * Author URI:      http://scriptburn.com
  * Text Domain:     edd-scriptburn-deploy-from-git-bb
@@ -161,7 +161,6 @@ if (!class_exists('EDD_Scriptburn_Deploy_From_GIT_BB'))
             }
         }
 
-         
         /**
          * Prepare download file array and call our filter acording to user entred repository url
          *
@@ -186,6 +185,7 @@ if (!class_exists('EDD_Scriptburn_Deploy_From_GIT_BB'))
                 // store all files with same protocol in same array index .so we can pass them to apprpriate filters at once
                 $protocols[$protocol][] = $file;
             }
+            p_l($protocols);
             foreach ($protocols as $protocol => $files)
             {
 
@@ -220,7 +220,7 @@ if (!class_exists('EDD_Scriptburn_Deploy_From_GIT_BB'))
          */
         public function admin_notice()
         {
-            if(!isset($_REQUEST['post']))
+            if (!isset($_REQUEST['post']))
             {
                 return;
             }

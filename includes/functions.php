@@ -134,7 +134,7 @@ function scb_edd_remote_get($url)
 
 function scb_edd_zipData($source, $destination, $folder_name)
 {
-
+    p_l("$source, $destination, $folder_name");
     if (!extension_loaded('zip') || !file_exists($source))
     {
         return false;
@@ -288,9 +288,17 @@ function scb_edd_clear_temp_indexes($file)
     return $file;
 }
 
+function scb_edd_html_email_filter()
+{
+    return "text/html";
+
+}
 function scb_edd_send_email($subject, $message)
 {
+    add_filter('wp_mail_content_type', 'scb_edd_html_email_filter');
     wp_mail(get_option('admin_email'), $subject, $message);
+    remove_filter('wp_mail_content_type', 'scb_edd_html_email_filter');
+
 }
 
 function scb_edd_post($url, $data, $json = false)

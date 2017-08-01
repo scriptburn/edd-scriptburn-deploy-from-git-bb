@@ -223,13 +223,79 @@ abstract class SCB_Repo_API
         {
             $func = 'api_auth';
         }
+        $params = [];
 
+        if (isset($_REQUEST['replay']) && $_REQUEST['replay'])
+        {
+            $params[0] = [];
+            $this->sample_gh($params[0], $_POST);
+        }
         if ($func && method_exists($this, $func))
         {
-            call_user_func_array(array($this, $func), array());
+            call_user_func_array(array($this, $func), $params);
 
         }
     }
+
+    /**
+     * Received repo webhooks
+     *
+     * @access      public
+     * @since       1.0.0
+     * @return      void
+     */
+    public function api_hook($input = null)
+    {
+        define('SCB_IN_API_HOOK', 1);
+        global $wpdb;
+        $post_raw = is_null($input) ? file_get_contents('php://input') : $input;
+        $post     = @json_decode($post_raw);
+        $post     = $post ? $post : $post_raw;
+
+        //is this hook is from github
+ 
+        // p_d($post->push->changes[0]->new->links->self->href);
+
+        //https: //api.bitbucket.org/2.0/repositories/rajneeshojha/test/refs/tags/v1.0
+        $ret = false;
+        if (is_object($post) &&
+            property_exists($post, 'repository') &&
+            property_exists($post->repository, 'html_url') &&
+            stripos($post->repository->html_url, '://github.com') !== false &&
+            property_exists($post, 'ref') && stripos($post->ref, 'refs/tags/') !== false
+        )
+        {
+            if (is_null($input))
+            {
+                //file_put_contents(__DIR__ . "/gh.txt", json_encode(['post' => is_array($post) || is_object($post) ? json_encode($post) : $post, 'POST' => json_encode($_POST)]));
+            }
+
+            if (SCB_GitHub_Repo_API()->get_setting('withhook'))
+            {
+                $ret = SCB_GitHub_Repo_API()->download_update($post, $_POST);
+            }
+        }
+        elseif (isset($post->push->changes[0]) && isset($post->push->changes[0]->new->links->self->href) &&
+            stripos($post->push->changes[0]->new->links->self->href, '://api.bitbucket.org/') !== false &&
+            stripos($post->push->changes[0]->new->links->self->href, '/refs/tags') !== false
+
+        )
+        {
+            if (SCB_BitBucket_Repo_API()->get_setting('withhook'))
+            {
+                $ret = SCB_BitBucket_Repo_API()->download_update($post, $_POST);
+            }
+        }
+        if (is_array($ret))
+        {
+            die(implode("-", $ret));
+        }
+        else
+        {
+            die($ret);
+        }
+    }
+
     /**
      * Process the webhook and updates the correct download
      *
@@ -279,7 +345,7 @@ abstract class SCB_Repo_API
                     }
                     if ($found === false || empty($repo_to_update_url[$file['attachment_id']]['url']))
                     {
-                        throw new Exception('Unable to find correct download to update ' . print_r($files, true) . "----" . print_r($repo_to_update_url, true));
+                        throw new Exception('Unable to find correct download to update <pre>' . print_r($files, true) . "----" . print_r($repo_to_update_url, true) . "</pre>");
                     }
                     $file = array_merge($files[$index], scb_edd_merge_repo_input($repo_to_update_url[$file['attachment_id']]['url']));
 
@@ -331,21 +397,21 @@ abstract class SCB_Repo_API
                 $msg = "Successfull:\n" . implode("\n", $passed) . "\n\n";
                 $msg .= "Failed:\n" . implode("\n", $failed);
                 p_l($msg);
-                scb_edd_send_email('Download Deploy Result', $msg);
+                scb_edd_send_email('Download Deploy Result', nl2br($msg));
                 return array(1, 'done but few failed');
             }
             elseif (count($failed))
             {
                 $msg = implode("\n", $failed);
                 p_l($msg);
-                scb_edd_send_email('Download Failed to deploy from repo', $msg);
+                scb_edd_send_email('Download Failed to deploy from repo', nl2br($msg));
                 return array(0, 'failed');
             }
             elseif (count($passed))
             {
                 $msg = implode("\n", $passed);
                 p_l($msg);
-                scb_edd_send_email('Download Deployed from repo succesfuly', $msg);
+                scb_edd_send_email('Download Deployed from repo succesfuly', nl2br($msg));
                 return array(1, 'All done');
             }
 
@@ -354,65 +420,13 @@ abstract class SCB_Repo_API
         {
             $msg = "Failed to Update download :" . (isset($download['post_title']) ? '"' . $download['post_title'] . '" ' : '') . $e->getMessage();
             p_l($msg);
-            scb_edd_send_email('Download Failed to deploy from repo', $msg);
+            scb_edd_send_email('Download Failed to deploy from repo', nl2br($msg));
 
             return array(0, $msg);
         }
 
     }
-    /**
-     * Received repo webhooks
-     *
-     * @access      public
-     * @since       1.0.0
-     * @return      void
-     */
-    public function api_hook($input = null)
-    {
-        define('SCB_IN_API_HOOK', 1);
-        global $wpdb;
-        $post = is_null($input) ? file_get_contents('php://input') : $input;
-        $post = @json_decode($post) ? json_decode($post) : $post;
 
-        //is this hook is from github
-        p_l($post->push);
-
-        // p_d($post->push->changes[0]->new->links->self->href);
-
-        //https: //api.bitbucket.org/2.0/repositories/rajneeshojha/test/refs/tags/v1.0
-        $ret = false;
-        if (is_object($post) &&
-            property_exists($post, 'repository') &&
-            property_exists($post->repository, 'html_url') &&
-            stripos($post->repository->html_url, '://github.com') !== false &&
-            property_exists($post, 'ref') && stripos($post->ref, 'refs/tags/') !== false
-        )
-        {
-            if (SCB_GitHub_Repo_API()->get_setting('withhook'))
-            {
-                $ret = SCB_GitHub_Repo_API()->download_update($post, $_POST);
-            }
-        }
-        elseif (isset($post->push->changes[0]) && isset($post->push->changes[0]->new->links->self->href) &&
-            stripos($post->push->changes[0]->new->links->self->href, '://api.bitbucket.org/') !== false &&
-            stripos($post->push->changes[0]->new->links->self->href, '/refs/tags') !== false
-
-        )
-        {
-            if (SCB_BitBucket_Repo_API()->get_setting('withhook'))
-            {
-                $ret = SCB_BitBucket_Repo_API()->download_update($post, $_POST);
-            }
-        }
-        if (is_array($ret))
-        {
-            die(implode("-", $ret));
-        }
-        else
-        {
-            die($ret);
-        }
-    }
 /**
  * Process Oauth
  *
@@ -585,7 +599,7 @@ abstract class SCB_Repo_API
             {
                 throw new Exception($tmp->get_error_message());
             }
-            p_l(" $url - $tmp-" . size_format(filesize($tmp)));
+            p_l(" $url - $tmp-" . size_format(filesize($tmp)));;
 
             $repacked = $this->repack($tmp, $attachment, $post);
 
@@ -596,13 +610,13 @@ abstract class SCB_Repo_API
             $tmp       = $repacked[1];
             $file_size = @filesize($tmp);
 
-            p_l(" repacked-" . size_format($file_size));
+            //p_l(" repacked-" . size_format($file_size));
             $file_array = array(
-                'name'     => $attachment['package'] . ".v" . $attachment['tag_num'] . ".zip", // ex: wp-header-logo.png
+                'name'     => $repacked[3], // ex: wp-header-logo.png
                 'tmp_name' => $tmp,
             );
-            p_l($file_array);
-            p_l($attachment);
+            //p_l($file_array);
+            //p_l($attachment);
             $result = "";
             if ($attachment['attachment_id'])
             {
@@ -873,10 +887,19 @@ abstract class SCB_Repo_API
                         {
                             $msg .= " and hooked";
                             $meta[$ret['attachment_id']]['hook_error'] = '';
-
+                        }
+                        else
+                        {
+                            $msg .= " " . $ret_hook[1];
+                            $meta[$ret['attachment_id']]['hook_error'] = '';
                         }
                     }
-                    p_l(sprintf($trans, 1), $msg);
+                    else
+                    {
+                        $msg .= " no hook attached";
+                        $meta[$ret['attachment_id']]['hook_error'] = '';
+
+                    }
 
                     set_transient(sprintf($trans, 1), $msg, 45);
 
@@ -949,11 +972,15 @@ abstract class SCB_Repo_API
                     if (!is_array($glob) || (is_array($glob) && count($glob) == 1))
                     {
                         $glob_info = pathinfo($glob[0]);
-                        p_l($glob_info);
                         //rename($glob[0], $glob_info['dirname'] . "/" . $new_name);
-                        $hook_data = array('post' => $post, 'attachment' => $attachment, 'folder' => $glob[0]);
-                        p_l($hook_data);
+                        $hook_data = array('post' => $post, 'attachment' => $attachment, 'folder' => $glob[0], 'zip_name' => $new_name);
+                         
+                        $hook_data = apply_filters('scb_edd_new_zipname', $hook_data);
+                         
+                        $hook_data['zip_name'] = str_replace("/", "", $hook_data['zip_name']);
+
                         do_action('scb_edd_before_repack', $hook_data);
+                        $new_name=$hook_data['zip_name'];
                         $ret = scb_edd_zipData($glob[0], $tmp_dir . $new_name . "-v." . $new_tag . ".zip", $new_name);
                         if (!$ret)
                         {
@@ -972,7 +999,7 @@ abstract class SCB_Repo_API
                 {
                     //scb_edd_deleteDir($new_folder);
                 }
-                return array(1, $repacked ? $tmp_dir . $new_name . "-v." . $new_tag . ".zip" : $file, $readme);
+                return array(1, $repacked ? $tmp_dir . $new_name . "-v." . $new_tag . ".zip" : $file, $readme,$new_name . "-v." . $new_tag . ".zip");
             }
             else
             {
@@ -1010,6 +1037,15 @@ abstract class SCB_Repo_API
         {
             return array(0, $e->getMessage());
         }
+    }
+
+    private function sample_gh(&$post, &$POST)
+    {
+        $cnt  = file_get_contents(__DIR__ . "/gh.txt");
+        $cnt  = json_decode($cnt);
+        $post = $cnt->post;
+        $POST = $cnt->POST;
+
     }
 
 }

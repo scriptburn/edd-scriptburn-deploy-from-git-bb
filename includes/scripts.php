@@ -78,8 +78,14 @@ function edd_scriptburn_deploy_from_git_bb_admin_scripts($hook)
                         }
                         //if ($repo_obj->get_setting('withhook'))
                         {
-                            $html = '<td title="%1$s" style="width:20px;padding-left:5px;padding-right:0px"><span class="dashicons dashicons-admin-plugins" style="color:%2$s"></span><div><span style="color:red">%3$s</span><span style="color:green">%4$s</span></div></td>';
-                            $hooks[$file['attachment_id']] = array('html' => sprintf($html, $repo['repo_url'],$repo_obj->get_setting('withhook')?'green':'red', $p1, $p2), 'repo' => $repo['repo_url'],'hook_error'=>@$repo_url[$file['attachment_id']]['hook_error']
+                            
+                            $html = '<div class="edd-file-name" style="width:2%5$s;margin-right:0px">
+    <span class="edd-repeatable-row-setting-label">
+    </span>
+    <span id="edd-edd_download_files0name-wrap" title="%1$s" ><span class="dashicons dashicons-admin-plugins" style="color:%2$s"></span><div><span style="color:red">%3$s</span><span style="color:green">%4$s</span>
+    </span>
+</div>';
+                            $hooks[$file['attachment_id']] = array('html' => sprintf($html, $repo['repo_url'],$repo_obj->get_setting('withhook')?'green':'red', $p1, $p2,'%'), 'repo' => $repo['repo_url'],'hook_error'=>@$repo_url[$file['attachment_id']]['hook_error']
 
                                 );
                         }
