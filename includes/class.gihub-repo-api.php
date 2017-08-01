@@ -174,12 +174,12 @@ class SCB_GitHub_Repo_API extends SCB_Repo_API
             }
             else
             {
-                 p_l($response);
+                 //p_l($response);
                 $found = false;
                 foreach ($response as $tag)
                 {
                    p_l((is_object($tag) ? 'object' : 'no obj') . "--" . (property_exists($tag, 'name') ? 'exists' : 'no exists') . "--" . $tag->name . "==" . $tagName);
-                    if (is_object($tag) && property_exists($tag, 'name') && ($tag->name == $tagName || $tag->name == "v" . $tagName))
+                    if (is_object($tag) && property_exists($tag, 'name') && ( $tag->name == $tagName || $tag->name == "v" . $tagName   || "v".$tag->name == $tagName ))
                     {
                         $found = $tag->zipball_url;
                         break;
